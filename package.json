@@ -12,7 +12,7 @@
   "license": "MIT",
   "dependencies": {
     "flo-cast": "git://github.com/renevanderark/flo-cast.git#v1.0.0",
-    "musical-score": "git://github.com/renevanderark/js-musical-score.git#v1.1.0",
+    "musical-score": "git://github.com/renevanderark/js-musical-score.git#v1.2.1",
     "resizable-canvas": "git://github.com/renevanderark/resizable-canvas.git#v1.0.0",
     "three": "^0.89.0"
   },

@@ -7,10 +7,14 @@ import {
   WebGLRenderer,
   PerspectiveCamera,
   Scene,
-  BoxGeometry,
+  Geometry,
   MeshLambertMaterial,
   Mesh,
-  SpotLight
+  SpotLight,
+  TextureLoader,
+  Vector3,
+  Vector2,
+  Face3
 } from "three";
 
 const VIRT_WIDTH = 1000;
@@ -22,25 +26,21 @@ const fooLayer = cast(HTMLCanvasElement, document.getElementById("foo-layer"));
 const renderer = new WebGLRenderer( { canvas: fooLayer } );
 const scene = new Scene();
 const camera = new PerspectiveCamera(
-  75 /* = field of view (FOV) expressed in deg */,
+  70 /* = field of view (FOV) expressed in deg */,
   1.0 /* = aspect ratio */,
   0.1 /* = near of clipping plane*/,
-  50 /* = far of clipping plane*/
+  5 /* = far of clipping plane*/
 );
 
-const geometry = new BoxGeometry( 1, 1, 0.5 );
-const material = new MeshLambertMaterial( { color: 0x00ff00 } );
-const cube = new Mesh( geometry, material );
-cube.receiveShadow = true;
+
+
+const material = new MeshLambertMaterial({
+  map: new TextureLoader().load('test.png')
+});
 
 const light = new SpotLight( 0xffffff );
-light.position.set( 0, 0, 10 );
+light.position.set( 0, 10, 10 );
 light.castShadow = true;            // default false
-
-
-scene.add( light );
-scene.add(cube);
-
 
 //Set up shadow properties for the light
 light.shadow.mapSize.width = 512;  // default
@@ -48,28 +48,94 @@ light.shadow.mapSize.height = 512; // default
 light.shadow.camera.near = camera.near;       // default
 light.shadow.camera.far = camera.far;      // default
 
-camera.position.z = 5;
+camera.position.y = 0.1;
+camera.position.z = 0;
+
+
+scene.add( light );
+
+const mkTriangle = (deg = 0) => {
+  const geometry = new Geometry();
+  geometry.vertices.push(new Vector3(0,0,0));
+  geometry.vertices.push(new Vector3(0.58,1,0));
+  geometry.vertices.push(new Vector3(-0.58,1,0));
+
+  geometry.faces.push( new Face3( 0, 1, 2 ));
+  geometry.faceVertexUvs[0].push([
+    new Vector2(0.5, 1),
+    new Vector2(0, 0),
+    new Vector2(1, 0)
+  ]);
+
+  geometry.computeFaceNormals();
+  geometry.computeVertexNormals();
+  const triangle = new Mesh( geometry, material );
+  triangle.receiveShadow = true;
+  triangle.rotation.z = deg * (Math.PI / 180);
+  triangle.rotation.x = 270 * (Math.PI / 180);
+  return triangle;
+}
+
+const triangles = [];
+for (let i = 0; i < 6; i++) {
+  const triangle = mkTriangle(i * 60);
+  triangles.push(triangle);
+  scene.add(triangle);
+}
 
 initViewPort(VIRT_WIDTH, VIRT_HEIGHT, getResizeListeners([],
   eventListeners.onResize,
   (scale, width, height) => renderer.setSize(width, height)
 ));
 
+music.addTrack("bass", "C2q B2q C2q B2q C2q B2q C2q B2q D2q E2q D2q E2q D2q E2q");
+music.addTrack("string", "C6w B6w E6w");
+//music.play(true)
+
+let landRot = 270;
+let camRot = 0;
+let shiftDown = false;
 eventListeners.add("keydown", (ev, scale) =>  {
   const key = cast(KeyboardEvent, ev).key;
   if (key === "ArrowUp") {
-    camera.position.z -= 1;
+    if (shiftDown) {
+      landRot -= 6;
+      triangles.forEach(t =>  t.rotation.x = landRot * (Math.PI / 180));
+    } else {
+      camera.position.x -= Math.sin(camRot * (Math.PI / 180)) * 0.1;
+      camera.position.z -= Math.cos(camRot * (Math.PI / 180)) * 0.1;
+    }
   } else if (key === "ArrowDown") {
-    camera.position.z += 1;
+    if (shiftDown) {
+      landRot += 6;
+      triangles.forEach(t => t.rotation.x = landRot * (Math.PI / 180));
+    } else {
+      camera.position.z += Math.cos(camRot * (Math.PI / 180)) * 0.1;
+      camera.position.x += Math.sin(camRot * (Math.PI / 180)) * 0.1;
+    }
+  } else if (key ==="ArrowRight") {
+    camRot -= 6;
+    camera.rotation.y =  camRot * (Math.PI / 180);
+  } else if (key === "ArrowLeft") {
+    camRot += 6;
+    camera.rotation.y =  camRot * (Math.PI / 180);
   } else if (key === "a") {
     music.playNote("piano", "C4h");
   } else if (key === "s") {
     music.playNote("piano", "D4h");
   } else if (key === "d") {
     music.playNote("piano", "E4h");
+  } else if (key === "Shift") {
+    shiftDown = true;
   }
 });
-window.setInterval(() => {   cube.rotation.x += 0.1; cube.rotation.y += 0.01; }, 25)
+
+eventListeners.add("keyup", (ev, scale) =>  {
+  const key = cast(KeyboardEvent, ev).key;
+  if (key === "Shift") {
+   shiftDown = false;
+ }
+})
 
 function animate() {
 	requestAnimationFrame( animate );
