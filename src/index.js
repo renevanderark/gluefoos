@@ -61,8 +61,8 @@ class Triangle {
   constructor(deg : number = 0, material : MeshLambertMaterial) {
     const geometry = new Geometry();
     geometry.vertices.push(new Vector3(0,0,0));
-    geometry.vertices.push(new Vector3(0.58*4,4,0));
-    geometry.vertices.push(new Vector3(-0.58*4,4,0));
+    geometry.vertices.push(new Vector3(-2,3.465,0));
+    geometry.vertices.push(new Vector3(-4,0,0));
 
     geometry.faces.push( new Face3( 0, 1, 2 ));
     geometry.faceVertexUvs[0].push([
@@ -133,7 +133,7 @@ const hexagon4 = mkHexagon(scene);
 const hexagon5 = mkHexagon(scene);
 for (let i = 0; i < 100; i++) {
   const hexagon = mkHexagon(scene);
-  hexagon.setPosition((0.5733*4)*(i*3), i % 2*4, 0);
+  hexagon.setPosition(2*(i*3), i % 2*3.465, 0);
 }
 
 let landRot = 0;
