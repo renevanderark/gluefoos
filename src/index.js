@@ -11,11 +11,14 @@ import {
   MeshLambertMaterial,
   Mesh,
   AmbientLight,
+  DirectionalLight,
   TextureLoader,
   Vector3,
   Vector2,
   Face3,
-  Fog
+  Fog,
+  BoxGeometry,
+  Color
 } from "three";
 
 const VIRT_WIDTH = 1000;
@@ -33,24 +36,41 @@ const camera = new PerspectiveCamera(
   15 /* = far of clipping plane*/
 );
 
-
+scene.background = new Color(0xaaaaff);
 
 const material = new MeshLambertMaterial({
   map: new TextureLoader().load('test.png')
 });
 
-const light = new AmbientLight( 0xffffff );
+const material2 = new MeshLambertMaterial({
+  map: new TextureLoader().load('test2.png')
+});
 
+const light = new AmbientLight( 0xdddddd );
+const spotLight = new DirectionalLight(0x555555);
+spotLight.position.set( 0, 0, 10);
+
+spotLight.castShadow = true;
+spotLight.shadow.camera.near = camera.near;
+spotLight.shadow.camera.far = camera.far;
+spotLight.shadow.camera.fov = camera.fov;
 
 camera.position.y = 0.1;
 camera.position.z = 0.1;
 camera.rotation.x = 90 * (Math.PI / 180);
 //light.position.set( 0, camera.position.y + 10, camera.position.z + 10 );
+var geometry = new BoxGeometry( 3, 3, 1 );
+var cube = new Mesh( geometry, material2 );
+cube.position.set(0,10,0);
+cube.rotation.x = 45 * (Math.PI / 180);
+cube.rotation.y = 45 * (Math.PI / 180);
+cube.receiveShadow = true;
 
-
+scene.add( cube );
 scene.add( light );
+scene.add( spotLight );
 
-scene.fog = new Fog(0x008833, camera.near, 12);
+scene.fog = new Fog(0xaaaaff, camera.near, 15);
 
 class Triangle {
   mesh : Mesh;
@@ -126,14 +146,11 @@ music.addTrack("bass", "C2q B2q C2q B2q C2q B2q C2q B2q D2q E2q D2q E2q D2q E2q"
 music.addTrack("string", "C6w B6w E6w");
 //music.play(true)
 
-const hexagon = mkHexagon(scene);
-const hexagon2 = mkHexagon(scene);
-const hexagon3 = mkHexagon(scene);
-const hexagon4 = mkHexagon(scene);
-const hexagon5 = mkHexagon(scene);
-for (let i = 0; i < 100; i++) {
-  const hexagon = mkHexagon(scene);
-  hexagon.setPosition(2*(i*3), i % 2*3.465, 0);
+for (let i = 0; i < 10; i++) {
+  for (let j = 0; j < 10; j++) {
+    const hexagon = mkHexagon(scene);
+    hexagon.setPosition(2*(i*3), 2.3*(j*3) + (i % 2*3.465), 0);
+  }
 }
 
 let landRot = 0;
@@ -194,7 +211,8 @@ eventListeners.add("keyup", (ev, scale) =>  {
 window.setInterval(() => {
   camera.position.y += Math.cos(camRot * (Math.PI / 180)) * (acceleration * 0.01);
   camera.position.x -= Math.sin(camRot * (Math.PI / 180)) * (acceleration * 0.01);
-
+  spotLight.position.copy( camera.position );
+  spotLight.position.z = 10;
 }, 50);
 
 function animate() {
