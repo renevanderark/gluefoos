@@ -8,6 +8,12 @@ module.exports = {
     filename: "index.js",
   },
   module: {
+    rules: [{
+      test: /\.jsx?$/,
+      enforce: "pre",
+      use: ["remove-flow-types-loader"],
+      include: path.join(__dirname, "src")
+    }],
     loaders: [
       {
         test: /\.js$/,

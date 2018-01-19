@@ -14,7 +14,8 @@ import {
   TextureLoader,
   Vector3,
   Vector2,
-  Face3
+  Face3,
+  Matrix4
 } from "three";
 
 const VIRT_WIDTH = 1000;
@@ -26,10 +27,10 @@ const fooLayer = cast(HTMLCanvasElement, document.getElementById("foo-layer"));
 const renderer = new WebGLRenderer( { canvas: fooLayer } );
 const scene = new Scene();
 const camera = new PerspectiveCamera(
-  70 /* = field of view (FOV) expressed in deg */,
+  60 /* = field of view (FOV) expressed in deg */,
   1.0 /* = aspect ratio */,
   0.1 /* = near of clipping plane*/,
-  5 /* = far of clipping plane*/
+  25 /* = far of clipping plane*/
 );
 
 
@@ -48,13 +49,14 @@ light.shadow.mapSize.height = 512; // default
 light.shadow.camera.near = camera.near;       // default
 light.shadow.camera.far = camera.far;      // default
 
-camera.position.y = 0.1;
-camera.position.z = 0;
+camera.position.y = 0.0000001;
+camera.position.z = 0.1;
+camera.rotation.x = 90 * (Math.PI / 180);
 
 
 scene.add( light );
 
-const mkTriangle = (deg = 0) => {
+const mkTriangle = (deg : number = 0) : Mesh => {
   const geometry = new Geometry();
   geometry.vertices.push(new Vector3(0,0,0));
   geometry.vertices.push(new Vector3(0.58,1,0));
@@ -72,15 +74,72 @@ const mkTriangle = (deg = 0) => {
   const triangle = new Mesh( geometry, material );
   triangle.receiveShadow = true;
   triangle.rotation.z = deg * (Math.PI / 180);
-  triangle.rotation.x = 270 * (Math.PI / 180);
+//  triangle.rotation.x = 270 * (Math.PI / 180);
   return triangle;
 }
 
-const triangles = [];
-for (let i = 0; i < 6; i++) {
-  const triangle = mkTriangle(i * 60);
-  triangles.push(triangle);
-  scene.add(triangle);
+class Triangle {
+  mesh : Mesh;
+  x : number;
+  y : number;
+  z : number;
+
+  constructor(deg : number = 0, material : MeshLambertMaterial) {
+    const geometry = new Geometry();
+    geometry.vertices.push(new Vector3(0,0,0));
+    geometry.vertices.push(new Vector3(0.58,1,0));
+    geometry.vertices.push(new Vector3(-0.58,1,0));
+
+    geometry.faces.push( new Face3( 0, 1, 2 ));
+    geometry.faceVertexUvs[0].push([
+      new Vector2(0.5, 1),
+      new Vector2(0, 0),
+      new Vector2(1, 0)
+    ]);
+
+    geometry.computeFaceNormals();
+    geometry.computeVertexNormals();
+    this.mesh = new Mesh( geometry, material );
+    this.mesh.receiveShadow = true;
+    this.mesh.rotation.z = deg * (Math.PI / 180);
+    this.x = 0;
+    this.y = 0;
+    this.z = 0;
+  }
+
+  setPosition(x : number, y : number, z : number) {
+    this.mesh.position.set(x, y, z);
+  }
+}
+
+class Hexagon {
+  triangles : Array<Triangle>;
+
+  constructor() {
+    this.triangles = [];
+  }
+
+  addTriangle(triangle : Triangle) {
+    this.triangles.push(triangle);
+  }
+
+  draw(scene : Scene) {
+    this.triangles.forEach(triangle => scene.add(triangle.mesh));
+  }
+
+  setPosition(x : number, y : number, z : number) {
+    this.triangles.forEach(triangle => triangle.setPosition( x, y, z ));
+  }
+}
+
+const mkHexagon = (scene : Scene) => {
+  const hexagon = new Hexagon();
+
+  for (let i = 0; i < 6; i++) {
+    hexagon.addTriangle(new Triangle(i * 60, material));
+  }
+  hexagon.draw(scene);
+  return hexagon;
 }
 
 initViewPort(VIRT_WIDTH, VIRT_HEIGHT, getResizeListeners([],
@@ -92,26 +151,37 @@ music.addTrack("bass", "C2q B2q C2q B2q C2q B2q C2q B2q D2q E2q D2q E2q D2q E2q"
 music.addTrack("string", "C6w B6w E6w");
 //music.play(true)
 
-let landRot = 270;
+const hexagon = mkHexagon(scene);
+const hexagon2 = mkHexagon(scene);
+const hexagon3 = mkHexagon(scene);
+hexagon2.setPosition(0.58*3 - 0.02, 1, 0);
+hexagon3.setPosition(0.58*6 - 0.04, 0, 0);
+
+
+let landRot = 0;
 let camRot = 0;
 let shiftDown = false;
+let acceleration = 0;
 eventListeners.add("keydown", (ev, scale) =>  {
   const key = cast(KeyboardEvent, ev).key;
   if (key === "ArrowUp") {
     if (shiftDown) {
-      landRot -= 6;
-      triangles.forEach(t =>  t.rotation.x = landRot * (Math.PI / 180));
+      camera.fov -= 1;
+      console.log(camera.fov)
+      camera.updateProjectionMatrix();
     } else {
-      camera.position.x -= Math.sin(camRot * (Math.PI / 180)) * 0.1;
-      camera.position.z -= Math.cos(camRot * (Math.PI / 180)) * 0.1;
+      acceleration = 4;
+
     }
   } else if (key === "ArrowDown") {
     if (shiftDown) {
-      landRot += 6;
-      triangles.forEach(t => t.rotation.x = landRot * (Math.PI / 180));
+      camera.fov += 1;
+      console.log(camera.fov)
+      camera.updateProjectionMatrix();
     } else {
-      camera.position.z += Math.cos(camRot * (Math.PI / 180)) * 0.1;
-      camera.position.x += Math.sin(camRot * (Math.PI / 180)) * 0.1;
+      acceleration = -4;
+
+
     }
   } else if (key ==="ArrowRight") {
     camRot -= 6;
@@ -134,8 +204,19 @@ eventListeners.add("keyup", (ev, scale) =>  {
   const key = cast(KeyboardEvent, ev).key;
   if (key === "Shift") {
    shiftDown = false;
- }
-})
+ } else if (key === "ArrowDown" || key === "ArrowUp") {
+    if (shiftDown) {
+
+    } else {
+      acceleration = 0;
+    }
+  }
+});
+
+window.setInterval(() => {
+  camera.position.y += Math.cos(camRot * (Math.PI / 180)) * (acceleration * 0.01);
+  camera.position.x -= Math.sin(camRot * (Math.PI / 180)) * (acceleration * 0.01);
+}, 50);
 
 function animate() {
 	requestAnimationFrame( animate );
