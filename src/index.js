@@ -10,12 +10,12 @@ import {
   Geometry,
   MeshLambertMaterial,
   Mesh,
-  SpotLight,
+  AmbientLight,
   TextureLoader,
   Vector3,
   Vector2,
   Face3,
-  Matrix4
+  Fog
 } from "three";
 
 const VIRT_WIDTH = 1000;
@@ -30,7 +30,7 @@ const camera = new PerspectiveCamera(
   60 /* = field of view (FOV) expressed in deg */,
   1.0 /* = aspect ratio */,
   0.1 /* = near of clipping plane*/,
-  25 /* = far of clipping plane*/
+  15 /* = far of clipping plane*/
 );
 
 
@@ -39,44 +39,18 @@ const material = new MeshLambertMaterial({
   map: new TextureLoader().load('test.png')
 });
 
-const light = new SpotLight( 0xffffff );
-light.position.set( 0, 10, 10 );
-light.castShadow = true;            // default false
+const light = new AmbientLight( 0xffffff );
 
-//Set up shadow properties for the light
-light.shadow.mapSize.width = 512;  // default
-light.shadow.mapSize.height = 512; // default
-light.shadow.camera.near = camera.near;       // default
-light.shadow.camera.far = camera.far;      // default
 
-camera.position.y = 0.0000001;
+camera.position.y = 0.1;
 camera.position.z = 0.1;
 camera.rotation.x = 90 * (Math.PI / 180);
+//light.position.set( 0, camera.position.y + 10, camera.position.z + 10 );
 
 
 scene.add( light );
 
-const mkTriangle = (deg : number = 0) : Mesh => {
-  const geometry = new Geometry();
-  geometry.vertices.push(new Vector3(0,0,0));
-  geometry.vertices.push(new Vector3(0.58,1,0));
-  geometry.vertices.push(new Vector3(-0.58,1,0));
-
-  geometry.faces.push( new Face3( 0, 1, 2 ));
-  geometry.faceVertexUvs[0].push([
-    new Vector2(0.5, 1),
-    new Vector2(0, 0),
-    new Vector2(1, 0)
-  ]);
-
-  geometry.computeFaceNormals();
-  geometry.computeVertexNormals();
-  const triangle = new Mesh( geometry, material );
-  triangle.receiveShadow = true;
-  triangle.rotation.z = deg * (Math.PI / 180);
-//  triangle.rotation.x = 270 * (Math.PI / 180);
-  return triangle;
-}
+scene.fog = new Fog(0x008833, camera.near, 12);
 
 class Triangle {
   mesh : Mesh;
@@ -87,8 +61,8 @@ class Triangle {
   constructor(deg : number = 0, material : MeshLambertMaterial) {
     const geometry = new Geometry();
     geometry.vertices.push(new Vector3(0,0,0));
-    geometry.vertices.push(new Vector3(0.58,1,0));
-    geometry.vertices.push(new Vector3(-0.58,1,0));
+    geometry.vertices.push(new Vector3(0.58*4,4,0));
+    geometry.vertices.push(new Vector3(-0.58*4,4,0));
 
     geometry.faces.push( new Face3( 0, 1, 2 ));
     geometry.faceVertexUvs[0].push([
@@ -102,6 +76,7 @@ class Triangle {
     this.mesh = new Mesh( geometry, material );
     this.mesh.receiveShadow = true;
     this.mesh.rotation.z = deg * (Math.PI / 180);
+
     this.x = 0;
     this.y = 0;
     this.z = 0;
@@ -154,9 +129,12 @@ music.addTrack("string", "C6w B6w E6w");
 const hexagon = mkHexagon(scene);
 const hexagon2 = mkHexagon(scene);
 const hexagon3 = mkHexagon(scene);
-hexagon2.setPosition(0.58*3 - 0.02, 1, 0);
-hexagon3.setPosition(0.58*6 - 0.04, 0, 0);
-
+const hexagon4 = mkHexagon(scene);
+const hexagon5 = mkHexagon(scene);
+for (let i = 0; i < 100; i++) {
+  const hexagon = mkHexagon(scene);
+  hexagon.setPosition((0.5733*4)*(i*3), i % 2*4, 0);
+}
 
 let landRot = 0;
 let camRot = 0;
@@ -216,6 +194,7 @@ eventListeners.add("keyup", (ev, scale) =>  {
 window.setInterval(() => {
   camera.position.y += Math.cos(camRot * (Math.PI / 180)) * (acceleration * 0.01);
   camera.position.x -= Math.sin(camRot * (Math.PI / 180)) * (acceleration * 0.01);
+
 }, 50);
 
 function animate() {
